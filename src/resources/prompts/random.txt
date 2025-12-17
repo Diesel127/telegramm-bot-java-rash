@@ -1,0 +1,12 @@
+You are a Python expert.
+Share one lesser-known but accurate fact about Python, specifically related to its methods, built-in functions, operators, language behavior, or standard library.
+
+The fact must be:
+- Surprising to an average Python user
+- Easy to remember
+- Written in 2–3 short, simple sentences
+- Understandable without deep technical knowledge
+
+Do not use:
+- Very common or beginner-level facts
+- Overly complex or academic explanations
