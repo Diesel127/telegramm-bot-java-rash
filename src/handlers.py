@@ -8,6 +8,8 @@ from config import CHATGPT_TOKEN
 from gpt import ChatGPTService
 from utils import (send_image, send_text, load_message, show_main_menu, load_prompt, send_text_buttons)
 
+CLOSE_BUTTON = {"start": "Close"}
+
 chatgpt_service = ChatGPTService(CHATGPT_TOKEN)
 
 logging.basicConfig(
@@ -15,6 +17,12 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+async def close_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    context.user_data.clear()
+    await start(update, context)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -44,7 +52,7 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         buttons = {
             "random": "Want another fact",
-            "start": "Close"
+            **CLOSE_BUTTON
         }
         await send_text_buttons(update, context, fact, buttons)
     except Exception as e:
@@ -61,16 +69,22 @@ async def random_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     query = update.callback_query
     await query.answer()
     data = query.data
-    if data == "random":
+    if data == 'random':
         await random(update, context)
-    elif data == "start":
+    elif data == 'start':
         await start(update, context)
+
 
 async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     await send_image(update, context, "gpt")
     chatgpt_service.set_prompt(load_prompt("gpt"))
-    await send_text(update, context, "Ask me a question ...")
+    await send_text_buttons(
+        update,
+        context,
+        "Ask me a question ...",
+        CLOSE_BUTTON
+    )
     context.user_data["conversation_state"] = "gpt"
 
 
@@ -81,7 +95,10 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         waiting_message = await send_text(update, context, "...")
         try:
             response = await chatgpt_service.add_message(message_text)
-            await send_text(update, context, response)
+            buttons = {
+                **CLOSE_BUTTON
+            }
+            await send_text_buttons(update, context, response, buttons)
         except Exception as e:
             logger.error(f"An error occurred while receiving a response from ChatGPT: {e}")
             await send_text(update, context, "An error occurred while processing your message.")
@@ -101,7 +118,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         waiting_message = await send_text(update, context, "...")
         try:
             response = await chatgpt_service.add_message(message_text)
-            buttons = {"start": "Close"}
+            buttons = {**CLOSE_BUTTON}
             personality_name = personality.replace("talk_", "").replace("_", " ").title()
             await send_text_buttons(update, context, f"{personality_name}: {response}", buttons)
         except Exception as e:
@@ -127,7 +144,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "talk_linus_torvalds": "Linus Torvalds (Linux, Git)",
         "talk_guido_van_rossum": "Guido van Rossum (Python)",
         "talk_mark_zuckerberg": "Mark Zuckerberg (Meta, Facebook)",
-        "start": "Close",
+        **CLOSE_BUTTON,
     }
     await send_text_buttons(update, context, "Choose a personality to chat with ...", personalities)
 
@@ -149,7 +166,7 @@ async def talk_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chatgpt_service.set_prompt(prompt)
         personality_name = data.replace("talk_", "").replace("_", " ").title()
         await send_image(update, context, data)
-        buttons = {"start": "CLose"}
+        buttons = {**CLOSE_BUTTON}
         await send_text_buttons(
             update,
             context,
