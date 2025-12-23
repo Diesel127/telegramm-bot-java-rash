@@ -1,7 +1,9 @@
 # Telegram ChatGPT Bot
 
 A versatile Telegram bot that integrates with OpenAI's ChatGPT to provide various interactive features.
+
 ![start.jpg](src/resources/images/start.jpg)
+
 ---
 
 ### ✔ Core Features:
@@ -20,7 +22,9 @@ A versatile Telegram bot that integrates with OpenAI's ChatGPT to provide variou
 - Resume Assistant
 
 ---
+
 ![random.jpg](src/resources/images/random.jpg)
+
 ### ✔ Prerequisites
 
 - Python 3.8+
@@ -77,7 +81,9 @@ Available commands:
 - `/random` - Get a random fact
 - `/gpt` - Chat with ChatGPT
 - `/talk` - Chat with a celebrity personality
+
 ![gpt.jpg](src/resources/images/gpt.jpg)
+
 ---
 
 ### ✔ Project Structure
