@@ -21,9 +21,18 @@ async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE, text: st
     )
 
 
-async def send_image(update: Update, context: ContextTypes.DEFAULT_TYPE, name: str):
+async def send_image(update, context, name: str, folder: str | None = None):
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    image_path = os.path.join(current_dir, 'resources', 'images', f'{name}.jpg')
+
+    if folder:
+        image_path = os.path.join(
+            current_dir, 'resources', 'images', folder, f'{name}.jpg'
+        )
+    else:
+        image_path = os.path.join(
+            current_dir, 'resources', 'images', f'{name}.jpg'
+        )
+
     with open(image_path, 'rb') as image:
         return await context.bot.send_photo(
             chat_id=update.effective_chat.id,

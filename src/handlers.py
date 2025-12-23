@@ -1,11 +1,12 @@
 import logging
 from random import choice
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from config import CHATGPT_TOKEN
 from gpt import ChatGPTService
+from src.quiz import QUIZ_DATA
 from utils import (send_image, send_text, load_message, show_main_menu, load_prompt, send_text_buttons)
 
 CLOSE_BUTTON = {"start": "Close"}
@@ -175,6 +176,79 @@ async def talk_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"\nYou can ask questions in your native language.",
             buttons
         )
+
+
+async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    context.user_data["conversation_state"] = "quiz"
+    context.user_data["quiz_index"] = 0
+
+    await send_quiz_question(update, context)
+
+
+async def send_quiz_question(update, context):
+    idx = context.user_data.get("quiz_index", 0)
+
+    if idx >= len(QUIZ_DATA):
+        await send_text(update, context, "Quiz finished.")
+        await start(update, context)
+        return
+
+    quiz_item = QUIZ_DATA[idx]
+
+    # картинка
+    await send_image(update, context, quiz_item["image"], folder="quiz_imgs")
+
+    # inline keyboard: 1 вариант = 1 строка
+    keyboard = []
+
+    for option in quiz_item["options"]:
+        keyboard.append([
+            InlineKeyboardButton(
+                text=option,
+                callback_data=f"quiz_answer:{option}"
+            )
+        ])
+
+    # нижняя строка
+    keyboard.append([
+        InlineKeyboardButton("Next", callback_data="quiz_next"),
+        InlineKeyboardButton("Close", callback_data="start"),
+    ])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=quiz_item["question"],
+        reply_markup=reply_markup
+    )
+
+
+async def quiz_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+
+    # answer of quiz question
+    if data.startswith("quiz_answer:"):
+        selected = data.split(":")[1]
+        idx = context.user_data["quiz_index"]
+        correct = QUIZ_DATA[idx]["correct"]
+
+        if selected == correct:
+            await query.message.reply_text("✅ Correct")
+        else:
+            await query.message.reply_text(f"❌ Wrong. Correct: {correct}")
+
+        return
+
+    # next question
+    if data == "quiz_next":
+        context.user_data["quiz_index"] += 1
+        await send_quiz_question(update, context)
+        return
 
 
 async def inter_random_input(update: Update, context: ContextTypes.DEFAULT_TYPE, message_text):
