@@ -1,23 +1,21 @@
 import logging
 from random import choice
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 
-from config import CHATGPT_TOKEN
-from gpt import ChatGPTService
-from src.quiz import QUIZ_DATA
+from src.constants import CLOSE_BUTTON
+from src.gpt import chatgpt_service, gpt
+from src.quiz_data import QUIZ_DATA
+from src.talk_data import talk
 from utils import (send_image, send_text, load_message, show_main_menu, load_prompt, send_text_buttons)
-
-CLOSE_BUTTON = {"start": "Close"}
-
-chatgpt_service = ChatGPTService(CHATGPT_TOKEN)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
 
 async def close_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -44,7 +42,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_image(update, context, "random")
-    message_to_delete = await send_text(update, context, "Looking for random fact...")
+    message_to_delete = await send_text(update, context, "Looking for a random fact...")
     try:
         prompt = load_prompt("random")
         fact = await chatgpt_service.send_question(
@@ -74,80 +72,6 @@ async def random_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await random(update, context)
     elif data == 'start':
         await start(update, context)
-
-
-async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    await send_image(update, context, "gpt")
-    chatgpt_service.set_prompt(load_prompt("gpt"))
-    await send_text_buttons(
-        update,
-        context,
-        "Ask me a question ...",
-        CLOSE_BUTTON
-    )
-    context.user_data["conversation_state"] = "gpt"
-
-
-async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message_text = update.message.text
-    conversation_state = context.user_data.get("conversation_state")
-    if conversation_state == "gpt":
-        waiting_message = await send_text(update, context, "...")
-        try:
-            response = await chatgpt_service.add_message(message_text)
-            buttons = {
-                **CLOSE_BUTTON
-            }
-            await send_text_buttons(update, context, response, buttons)
-        except Exception as e:
-            logger.error(f"An error occurred while receiving a response from ChatGPT: {e}")
-            await send_text(update, context, "An error occurred while processing your message.")
-        finally:
-            await context.bot.delete_message(
-                chat_id=update.effective_chat.id,
-                message_id=waiting_message.message_id
-            )
-    if conversation_state == "talk":
-        personality = context.user_data.get("selected_personality")
-        if personality:
-            prompt = load_prompt(personality)
-            chatgpt_service.set_prompt(prompt)
-        else:
-            await send_text(update, context, "Please choose a personality to start the conversation!")
-            return
-        waiting_message = await send_text(update, context, "...")
-        try:
-            response = await chatgpt_service.add_message(message_text)
-            buttons = {**CLOSE_BUTTON}
-            personality_name = personality.replace("talk_", "").replace("_", " ").title()
-            await send_text_buttons(update, context, f"{personality_name}: {response}", buttons)
-        except Exception as e:
-            logger.error(f"An error occurred while receiving a response from ChatGPT: {e}")
-            await send_text(update, context, "An error occurred while processing your message.")
-            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-        finally:
-            await context.bot.delete_message(
-                chat_id=update.effective_chat.id,
-                message_id=waiting_message.message_id
-            )
-    if not conversation_state:
-        intent_recognized = await inter_random_input(update, context, message_text)
-        if not intent_recognized:
-            await show_funny_response(update, context)
-        return
-
-
-async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    await send_image(update, context, "talk")
-    personalities = {
-        "talk_linus_torvalds": "Linus Torvalds (Linux, Git)",
-        "talk_guido_van_rossum": "Guido van Rossum (Python)",
-        "talk_mark_zuckerberg": "Mark Zuckerberg (Meta, Facebook)",
-        **CLOSE_BUTTON,
-    }
-    await send_text_buttons(update, context, "Choose a personality to chat with ...", personalities)
 
 
 async def talk_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -248,6 +172,55 @@ async def quiz_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "quiz_next":
         context.user_data["quiz_index"] += 1
         await send_quiz_question(update, context)
+        return
+
+
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message_text = update.message.text
+    conversation_state = context.user_data.get("conversation_state")
+    if conversation_state == "gpt":
+        waiting_message = await send_text(update, context, "...")
+        try:
+            response = await chatgpt_service.add_message(message_text)
+            buttons = {
+                **CLOSE_BUTTON
+            }
+            await send_text_buttons(update, context, response, buttons)
+        except Exception as e:
+            logger.error(f"An error occurred while receiving a response from ChatGPT: {e}")
+            await send_text(update, context, "An error occurred while processing your message.")
+        finally:
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id,
+                message_id=waiting_message.message_id
+            )
+    if conversation_state == "talk":
+        personality = context.user_data.get("selected_personality")
+        if personality:
+            prompt = load_prompt(personality)
+            chatgpt_service.set_prompt(prompt)
+        else:
+            await send_text(update, context, "Please choose a personality to start the conversation!")
+            return
+        waiting_message = await send_text(update, context, "...")
+        try:
+            response = await chatgpt_service.add_message(message_text)
+            buttons = {**CLOSE_BUTTON}
+            personality_name = personality.replace("talk_", "").replace("_", " ").title()
+            await send_text_buttons(update, context, f"{personality_name}: {response}", buttons)
+        except Exception as e:
+            logger.error(f"An error occurred while receiving a response from ChatGPT: {e}")
+            await send_text(update, context, "An error occurred while processing your message.")
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
+        finally:
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id,
+                message_id=waiting_message.message_id
+            )
+    if not conversation_state:
+        intent_recognized = await inter_random_input(update, context, message_text)
+        if not intent_recognized:
+            await show_funny_response(update, context)
         return
 
 

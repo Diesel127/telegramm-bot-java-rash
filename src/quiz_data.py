@@ -1,3 +1,4 @@
+# here I store questions for /quiz -> list[dict]
 QUIZ_DATA = [
     {
         "image": "quiz_1",

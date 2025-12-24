@@ -2,7 +2,8 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
 from config import BOT_TOKEN
-from handlers import start, random, gpt, message_handler, talk, talk_button, close_button, random_button, quiz_button, quiz
+from handlers import start, random, gpt, message_handler, talk, close_button, quiz_button, random_button, talk_button, \
+    quiz
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))

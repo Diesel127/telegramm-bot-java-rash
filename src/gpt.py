@@ -1,5 +1,12 @@
 from openai import OpenAI
 import httpx
+from telegram import Update
+from telegram.ext import ContextTypes
+
+from src.config import CHATGPT_TOKEN
+from src.constants import CLOSE_BUTTON
+
+from src.utils import send_image, load_prompt, send_text_buttons
 
 
 class ChatGPTService:
@@ -37,3 +44,20 @@ class ChatGPTService:
         self.message_list.append({"role": "system", "content": prompt_text})
         self.message_list.append({"role": "user", "content": message_text})
         return await self.send_message_list()
+
+
+chatgpt_service = ChatGPTService(CHATGPT_TOKEN)
+
+
+# handler for /gpt button
+async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    await send_image(update, context, "gpt")
+    chatgpt_service.set_prompt(load_prompt("gpt"))
+    await send_text_buttons(
+        update,
+        context,
+        "Ask me a question ...",
+        CLOSE_BUTTON
+    )
+    context.user_data["conversation_state"] = "gpt"
