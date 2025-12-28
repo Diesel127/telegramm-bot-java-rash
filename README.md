@@ -98,10 +98,11 @@ TelegramHub
     ├── handlers.py      # Bot command handlers
     ├── quiz.py          # Quiz game logic
     ├── quiz_data.py     # List of dict with data for quiz
-    ├── talk_data.py     # hello world
+    ├── talk_data.py     # Logic of talk command with personalities 
     ├── utils.py         # Utility functions
     └── resources/       # Resource files
         ├── images/      # Image assets for the bot
+        |    └── quiz_imgs/    # Images for quiz command
         ├── messages/    # Message templates
         │   └── start.txt
         └── prompts/     # AI prompt templates
